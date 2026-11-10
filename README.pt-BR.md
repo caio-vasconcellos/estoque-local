@@ -1,26 +1,33 @@
-# Estoque Local — núcleo de estoque
+# Estoque Local
 
 [English](README.md)
 
-Parte 1 de 3: núcleo de estoque em Python e SQLite. Inclui produtos, compras,
-vendas, devoluções parciais, ajustes, custo médio e validações de saldo.
-Valores monetários são centavos inteiros. Saldo e histórico são gravados juntos,
-com proteção contra repetição de uma mesma movimentação.
+Parte 2 de 3: aplicação web local sobre o núcleo de estoque.
 
-## Executar os testes do núcleo
+Cadastre produtos, compras, vendas, devoluções parciais e ajustes.
+Compare sete rankings, receita, custo histórico, lucro bruto e margem.
+Inclui português e inglês, filtros por data, buscas, CSV e backup.
 
-Python 3.11 ou superior:
+## Executar
 
-```text
-python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.venv\Scripts\python.exe -m pytest -q
+Python 3.11 ou superior. No Windows:
+
+```powershell
+.\start.ps1 -Setup
 ```
 
-Em Linux/macOS, use `.venv/bin/python`. São 26 testes das regras de negócio,
-incluindo vendas concorrentes, rollback de falhas e rateio de devoluções parciais.
-O núcleo pode ser importado com `from stock.ledger import Ledger`.
+Acesse http://127.0.0.1:8765. Após instalar, abra `start.cmd` ou execute `start.ps1`.
+Em Linux/macOS, crie um ambiente virtual, instale `requirements.txt` e execute
+`.venv/bin/python run.py`.
 
-A interface web e a API chegam na parte 2. A documentação completa, as capturas
-de tela e o GitHub Actions chegam na parte 3. São pontos do trabalho já
-desenvolvido localmente, preparados para publicação gradual.
+O banco é `data/stock.sqlite3`. O aplicativo é local, para uma pessoa;
+não o exponha diretamente à internet. Lucro bruto não desconta despesas
+operacionais, impostos sobre vendas ou taxas. A seção Como funciona explica
+as regras dos cálculos. Dados e ambiente virtual ficam fora do Git.
+
+## Testes
+
+Instale `requirements-dev.txt` e execute `python -m pytest -q` (28 testes).
+Confira a sintaxe JavaScript com `node --check stock/static/app.js`.
+
+A parte 3 acrescenta documentação completa nos dois idiomas, capturas e GitHub Actions.

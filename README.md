@@ -1,26 +1,33 @@
-# Estoque Local — inventory core
+# Estoque Local
 
 [Português](README.pt-BR.md)
 
-Stage 1 of 3: the Python and SQLite inventory core. Includes products, purchases,
-sales, partial returns, adjustments, weighted-average costs and stock validation.
-Money is stored as integer cents. Every stock change and its ledger record commit
-together. Retried movements are protected against duplication.
+Stage 2 of 3: the local web application, built on the inventory core.
 
-## Run the core tests
+Manage products, purchases, sales, partial returns and stock adjustments.
+Compare seven product rankings, revenue, historical cost, gross profit and margin.
+Includes Portuguese and English, date filters, searches, CSV exports and backups.
 
-Python 3.11 or later:
+## Run
 
-```text
-python -m venv .venv
-.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.venv\Scripts\python.exe -m pytest -q
+Python 3.11 or later. On Windows:
+
+```powershell
+.\start.ps1 -Setup
 ```
 
-Use `.venv/bin/python` on Linux/macOS. This stage contains 26 business-rule tests,
-including concurrent sales, failed-write rollback and partial-return rounding.
-The core can be imported with `from stock.ledger import Ledger`.
+Open http://127.0.0.1:8765. After setup, double-click `start.cmd` or run `start.ps1`.
+On Linux/macOS, create a virtual environment, install `requirements.txt` and use
+`.venv/bin/python run.py`.
 
-The web interface and HTTP API arrive in stage 2. Full documentation, screenshots
-and GitHub Actions arrive in stage 3. These are checkpoints of work already
-implemented locally, prepared for sequential publication.
+The database is `data/stock.sqlite3`. This is a local, single-user application;
+do not expose it directly to the internet. Gross profit excludes operating
+expenses, sales taxes and fees. The interface explains the accounting rules
+under How it works. Runtime data and the virtual environment are excluded from Git.
+
+## Tests
+
+Install `requirements-dev.txt`, then run `python -m pytest -q` (28 tests).
+Use `node --check stock/static/app.js` to check JavaScript syntax.
+
+Stage 3 adds complete bilingual documentation, screenshots and GitHub Actions.
