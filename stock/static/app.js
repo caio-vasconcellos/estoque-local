@@ -1,188 +1,459 @@
-'use strict';
+import { createApiClient } from "./api.js";
+import { escapeHtml } from "./format.js";
+import { readLanguage, saveLanguage, translate, translations } from "./i18n.js";
+import {
+  filterMovements,
+  filterProducts,
+  guide,
+  movementsPage,
+  overview,
+  productsPage,
+  rankingsPage,
+  setViewContext,
+} from "./views.js";
+
 const $ = (selector) => document.querySelector(selector);
-const esc = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const words = {
-  pt: {
-    workspace:'CADERNO DE OPERAÇÃO', overview:'Visão geral', products:'Produtos', movements:'Movimentações', rankings:'Rankings', guide:'Como funciona', local:'No seu computador', notebook:'ESTOQUE & RESULTADO', backup:'Baixar backup', language:'Idioma', new_product:'Novo produto', new_movement:'Registrar movimento ↗', period:'Período dos resultados', from:'De', to:'Até', apply:'Aplicar', last_30:'Últimos 30 dias', loading:'Carregando…', footer:'Dados armazenados localmente.', cancel:'Cancelar', save:'Salvar registro', saved:'Registro salvo.',
-    overview_k:'01 / O NEGÓCIO EM NÚMEROS', overview_d:'O que saiu, o que ficou e quanto cada produto trouxe de resultado.', products_k:'02 / SEU CATÁLOGO', products_d:'O saldo é atualizado pelas movimentações. Aqui você cuida do cadastro.', movements_k:'03 / LIVRO DE MOVIMENTAÇÕES', movements_d:'Compras, vendas, devoluções e ajustes, sem apagar o histórico.', rankings_k:'04 / PRODUTO A PRODUTO', rankings_d:'Vender mais e ganhar mais são coisas diferentes. Compare os dois.', guide_k:'05 / AS CONTAS ABERTAS', guide_d:'Veja o que entra em cada indicador e como os registros são tratados.',
-    revenue:'Receita de vendas', profit:'Lucro bruto', stock_value:'Valor em estoque', low_stock:'Precisam de reposição', net_returns:'Já descontadas as devoluções do período', gross_note:'Receita menos o custo das unidades vendidas', current_note:'Saldo atual, independente do período', products_unit:'produtos', units:'un.', margin:'Margem bruta', no_margin:'Sem receita positiva para calcular a margem', sales_rhythm:'Vendas no período', revenue_chart:'Receita diária líquida de devoluções', purchase_title:'Compra não é custo da venda', purchases:'Gasto em compras', cogs:'Custo das vendas', losses:'Custo das perdas', net_units:'Unidades vendidas líquidas', top_sellers:'Mais vendidos', slow_sellers:'Menos vendidos', top_profit:'Maior lucro bruto', high_cost:'Maior custo médio unitário', top_spend:'Maior gasto em compras', top_margin:'Maior margem bruta', locked_capital:'Maior valor parado em estoque', no_sales:'Sem vendas no período', see_rankings:'Ver todos ↗', view_products:'Ver produtos ↗', alerts:'Reposição em pauta', below_min:'Saldo igual ou abaixo do mínimo cadastrado.', all_good:'Nenhum produto abaixo do mínimo.', no_data:'Nenhum registro neste período.', no_eligible:'Nenhum produto elegível para este ranking.', rank_qty:'Unidades vendidas menos devolvidas no período. Inclui produtos ativos sem venda.', rank_profit:'Receita menos custo histórico das vendas, com devoluções do período.', rank_cost:'Custo médio do saldo atual. Não muda com o filtro de período.', rank_spend:'Valor das entradas por compra no período, mesmo que ainda não tenham sido vendidas.', rank_margin:'Lucro bruto ÷ receita. Só produtos com receita líquida positiva no período.', rank_capital:'Custo total das unidades que estão em estoque agora.',
-    empty_title:'Seu estoque começa aqui.', empty_body:'Cadastre um produto e registre a primeira compra. Se quiser explorar antes, carregue um catálogo fictício de uma pequena loja.', demo:'Explorar com dados de exemplo', demo_banner:'BASE DE DEMONSTRAÇÃO · Os registros iniciais são fictícios. Novos registros ficam nesta mesma base.', demo_confirm:'Carregar seis produtos e movimentos fictícios? Isso só funciona com o catálogo vazio.', search:'Buscar nome, código ou fornecedor', all_categories:'Todas as categorias', show_archived:'Mostrar arquivados', only_low:'Só reposição', csv:'Exportar CSV ↗', print:'Imprimir relatório', product:'Produto', category:'Categoria', stock:'Saldo', minimum:'Mínimo', avg_cost:'Custo médio', sale_price:'Preço de venda', inventory:'Valor do saldo', status:'Situação', actions:'Ações', edit:'Editar', archived:'Arquivado', replenish:'Repor', regular:'Regular', date:'Data', type:'Tipo', quantity:'Quantidade', revenue_short:'Receita', cost:'Custo do estoque', note:'Observação', purchase:'Compra', sale:'Venda', return:'Devolução de venda', loss:'Perda / baixa', gain:'Ajuste de entrada', all_types:'Todos os tipos', returned:'Devolver', refund_left:'disponíveis para devolução', ledger_note:'Custo positivo aumenta o valor em estoque; negativo retira. Devolução estorna a receita e repõe o custo original. Todas as movimentações usam a data de hoje.', current_balance:'Estoque atual', export_note:'CSV: valores monetários em centavos; margin em percentual. Cadastros e saldos são atuais; vendas, custos e compras respeitam o período.',
-    sku:'Código / SKU', name:'Nome', supplier:'Fornecedor', active:'Produto ativo', product_form:'CADASTRO DE PRODUTO', edit_product:'Editar produto', price_hint:'Preço sugerido; a venda permite informar outro valor.', movement_form:'NOVO REGISTRO', unit_price:'Preço unitário', unit_cost:'Custo unitário de entrada', sale_reference:'Venda de origem', choose:'Selecione…', reason:'Motivo / referência', move_hint:'A operação altera saldo e histórico juntos. Confira antes de salvar.', return_hint:'Use devolução para corrigir uma venda. O estorno usa o preço e o custo daquela venda.', adjustment_hint:'Ajustes não são vendas nem compras. Informe o motivo; entradas pedem o custo por unidade.', available:'Disponível', no_products:'Cadastre um produto ativo para registrar uma movimentação.', no_returns:'Não há vendas disponíveis para devolução.',
-    connection:'Não foi possível conectar ao servidor. Verifique se ele continua aberto.', unexpected:'Não foi possível concluir o registro. Tente novamente.', csrf:'A sessão mudou. Recarregue a página antes de salvar.', json:'Formato de requisição inválido.', size:'O registro excede o tamanho permitido.', money:'Informe um valor entre 0 e 10.000.000 com até duas casas decimais.', invalid_quantity:'Informe uma quantidade inteira válida.', text:'Confira o tamanho dos campos.', required:'Preencha os campos obrigatórios.', missing:'Produto não encontrado ou arquivado.', duplicate_sku:'Este código já está em uso.', insufficient:'Não há estoque suficiente para esta saída.', archive_stock:'Para arquivar, o produto precisa estar com saldo zero.', kind:'Escolha um tipo de movimentação.', sale_missing:'Selecione uma venda de origem válida.', return_exceeded:'A quantidade excede o saldo disponível para devolução.', request_conflict:'Este envio já foi utilizado com outros dados. Feche e abra o formulário.', dates:'Informe um período válido: início anterior ou igual ao fim.', demo_not_empty:'Os exemplos só podem ser carregados em um catálogo vazio.', zero_cost:'Custo zero é permitido; confira se é intencional.'
-  },
-  en: {
-    workspace:'OPERATIONS NOTEBOOK', overview:'Overview', products:'Products', movements:'Movements', rankings:'Rankings', guide:'How it works', local:'On your computer', notebook:'STOCK & RESULTS', backup:'Download backup', language:'Language', new_product:'New product', new_movement:'Record movement ↗', period:'Results period', from:'From', to:'To', apply:'Apply', last_30:'Last 30 days', loading:'Loading…', footer:'Data stored locally.', cancel:'Cancel', save:'Save record', saved:'Record saved.',
-    overview_k:'01 / THE BUSINESS IN NUMBERS', overview_d:'What sold, what remains and what each product contributed.', products_k:'02 / YOUR CATALOGUE', products_d:'Movements update the balance. Product details are managed here.', movements_k:'03 / MOVEMENT LEDGER', movements_d:'Purchases, sales, returns and adjustments, with a lasting history.', rankings_k:'04 / PRODUCT BY PRODUCT', rankings_d:'Selling more and earning more are different. Compare both.', guide_k:'05 / BEHIND THE NUMBERS', guide_d:'What each measure includes and how records are handled.',
-    revenue:'Sales revenue', profit:'Gross profit', stock_value:'Inventory value', low_stock:'Need replenishment', net_returns:'After returns recorded within the period', gross_note:'Revenue less the cost of units sold', current_note:'Current balance, regardless of period', products_unit:'products', units:'units', margin:'Gross margin', no_margin:'No positive revenue to calculate a margin', sales_rhythm:'Sales during the period', revenue_chart:'Daily revenue, net of returns', purchase_title:'Purchases are not cost of sales', purchases:'Purchase spending', cogs:'Cost of sales', losses:'Cost of stock losses', net_units:'Net units sold', top_sellers:'Best sellers', slow_sellers:'Slowest sellers', top_profit:'Highest gross profit', high_cost:'Highest average unit cost', top_spend:'Highest purchase spending', top_margin:'Highest gross margin', locked_capital:'Highest inventory value', no_sales:'No sales in the period', see_rankings:'See all rankings ↗', view_products:'View products ↗', alerts:'Replenishment list', below_min:'Balance at or below the configured minimum.', all_good:'No products below their minimum.', no_data:'No records in this period.', no_eligible:'No eligible products for this ranking.', rank_qty:'Units sold less units returned in the period. Includes active products with no sales.', rank_profit:'Revenue less historical cost of sales, including returns in the period.', rank_cost:'Average cost of current stock. Unaffected by the date filter.', rank_spend:'Cost of purchases in the period, including units not yet sold.', rank_margin:'Gross profit ÷ revenue. Only products with positive net revenue in the period.', rank_capital:'Total cost of units currently in stock.',
-    empty_title:'Your stock starts here.', empty_body:'Add a product and record your first purchase. To explore first, load a fictional small-shop catalogue.', demo:'Explore sample data', demo_banner:'DEMO DATABASE · Initial records are fictional. New records are saved in this same database.', demo_confirm:'Load six sample products and fictional movements? This only works with an empty catalogue.', search:'Search name, code or supplier', all_categories:'All categories', show_archived:'Show archived', only_low:'Replenishment only', csv:'Export CSV ↗', print:'Print report', product:'Product', category:'Category', stock:'In stock', minimum:'Minimum', avg_cost:'Average cost', sale_price:'Selling price', inventory:'Stock value', status:'Status', actions:'Actions', edit:'Edit', archived:'Archived', replenish:'Replenish', regular:'Regular', date:'Date', type:'Type', quantity:'Quantity', revenue_short:'Revenue', cost:'Inventory cost', note:'Note', purchase:'Purchase', sale:'Sale', return:'Sales return', loss:'Loss / write-off', gain:'Stock adjustment in', all_types:'All types', returned:'Return', refund_left:'available to return', ledger_note:'Positive cost adds inventory value; negative cost removes it. A return refunds revenue and restores the original cost. Every movement is recorded with today’s date.', current_balance:'Current inventory', export_note:'CSV: monetary values are integer cents; margin is a percentage. Catalogue and balances are current; sales, costs and purchases use the selected period.',
-    sku:'Code / SKU', name:'Name', supplier:'Supplier', active:'Active product', product_form:'PRODUCT DETAILS', edit_product:'Edit product', price_hint:'Suggested price; a different amount can be used for a sale.', movement_form:'NEW RECORD', unit_price:'Unit selling price', unit_cost:'Incoming unit cost', sale_reference:'Original sale', choose:'Select…', reason:'Reason / reference', move_hint:'Balance and history are updated together. Check the details before saving.', return_hint:'Use a return to correct a sale. It uses that sale’s original price and cost.', adjustment_hint:'Adjustments are neither sales nor purchases. Give a reason; incoming stock needs a unit cost.', available:'Available', no_products:'Add an active product before recording a movement.', no_returns:'There are no sales available for a return.',
-    connection:'Could not connect to the server. Check that it is still running.', unexpected:'Could not save the record. Please try again.', csrf:'The session changed. Reload the page before saving.', json:'Invalid request format.', size:'This record is too large.', money:'Enter an amount from 0 to 10,000,000 with up to two decimal places.', invalid_quantity:'Enter a valid whole-number quantity.', text:'Check the length of the fields.', required:'Complete all required fields.', missing:'Product not found or archived.', duplicate_sku:'This code is already in use.', insufficient:'There is not enough stock for this movement.', archive_stock:'A product must have zero stock before it can be archived.', kind:'Choose a movement type.', sale_missing:'Select a valid original sale.', return_exceeded:'The quantity exceeds the amount available to return.', request_conflict:'This submission was already used with different data. Close and reopen the form.', dates:'Choose a valid period: the start must be on or before the end.', demo_not_empty:'Sample data can only be loaded into an empty catalogue.', zero_cost:'Zero cost is allowed; check that it is intentional.'
+const pages = ["overview", "products", "movements", "rankings", "guide"];
+
+let lang = readLanguage();
+let state;
+let page = "overview";
+let mode;
+let editingId;
+let requestKey;
+let toastTimer;
+
+const t = (key) => translate(lang, key);
+const errorText = (error) =>
+  t(error.message in translations[lang] ? error.message : "unexpected");
+const api = createApiClient(() => state?.csrf_token || "");
+
+function notify(message) {
+  $("#toast").textContent = message;
+  $("#toast").hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => ($("#toast").hidden = true), 5000);
+}
+
+function query() {
+  return new URLSearchParams({
+    start: $("#start").value,
+    end: $("#end").value,
+  }).toString();
+}
+
+async function refresh() {
+  state = await api(`/api/state?${query()}`);
+  render();
+}
+
+function setLanguage() {
+  document.documentElement.lang = lang === "pt" ? "pt-BR" : "en";
+  document.title = `Estoque Local · ${t(page)}`;
+  $("#language").value = lang;
+  document
+    .querySelector("nav")
+    .setAttribute("aria-label", lang === "pt" ? "Principal" : "Main");
+
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    element.textContent = t(element.dataset.i18n);
+  });
+}
+
+function render() {
+  const hashPage = location.hash.slice(1);
+  page = pages.includes(hashPage) ? hashPage : "overview";
+
+  setLanguage();
+  setViewContext({
+    state,
+    language: lang,
+    translate: t,
+    query,
+  });
+
+  document.querySelectorAll("[data-page]").forEach((link) => {
+    const isCurrent = link.dataset.page === page;
+    link.classList.toggle("active", isCurrent);
+    if (isCurrent) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
+
+  $("#page-title").textContent = t(page);
+  $("#page-kicker").textContent = t(`${page}_k`);
+  $("#page-description").textContent = t(`${page}_d`);
+  $("#demo-banner").hidden = !state.demo;
+  $("#demo-banner").textContent = t("demo_banner");
+  $("#period").hidden = page === "guide";
+
+  if (page === "guide") {
+    $("#content").innerHTML = guide();
+    return;
+  }
+
+  if (!state.products.length) {
+    $("#content").innerHTML = `
+      <div class="empty">
+        <p class="eyebrow">00 / ESTOQUE LOCAL</p>
+        <h2>${t("empty_title")}</h2>
+        <p>${t("empty_body")}</p>
+        <button class="primary" data-action="new-product">
+          ${t("new_product")}
+        </button>
+        <button class="secondary" data-action="demo">${t("demo")}</button>
+      </div>
+    `;
+    return;
+  }
+
+  const pageViews = {
+    overview,
+    products: productsPage,
+    movements: movementsPage,
+    rankings: rankingsPage,
+  };
+  $("#content").innerHTML = pageViews[page]();
+
+  if (page === "products") filterProducts();
+  if (page === "movements") filterMovements();
+}
+
+function input(label, name, value = "", attributes = "", wide = false) {
+  return `
+    <label class="${wide ? "wide" : ""}">
+      ${t(label)}
+      <input
+        name="${name}"
+        value="${escapeHtml(value)}"
+        ${attributes}
+      >
+    </label>
+  `;
+}
+
+function showDialog(title, kicker) {
+  $("#dialog-title").textContent = title;
+  $("#dialog-kicker").textContent = kicker;
+  $("#form-error").textContent = "";
+  $("#save").disabled = false;
+  $("#editor").showModal();
+}
+function productDialog(id) {
+  mode = "product";
+  editingId = id;
+  const product = state.products.find((item) => item.id === id);
+  const price = product ? (product.price_cents / 100).toFixed(2) : "";
+  const activeField = product
+    ? `
+      <label class="checkbox wide">
+        <input
+          name="active"
+          type="checkbox"
+          ${product.active ? "checked" : ""}
+        >
+        ${t("active")}
+      </label>
+    `
+    : "";
+
+  $("#editor-fields").innerHTML = `
+    <div class="form-grid">
+      ${input(
+        "name",
+        "name",
+        product?.name || "",
+        'maxlength="120" required',
+        true,
+      )}
+      ${input("sku", "sku", product?.sku || "", 'maxlength="40" required')}
+      ${input("category", "category", product?.category || "", 'maxlength="60"')}
+      ${input(
+        "supplier",
+        "supplier",
+        product?.supplier || "",
+        'maxlength="120"',
+        true,
+      )}
+      ${input(
+        "sale_price",
+        "price",
+        price,
+        'type="number" min="0" max="10000000" step="0.01" required',
+      )}
+      ${input(
+        "minimum",
+        "minimum",
+        product?.minimum ?? 0,
+        'type="number" min="0" max="1000000" step="1" required',
+      )}
+      <small class="wide">${t("price_hint")}</small>
+      ${activeField}
+    </div>
+  `;
+  showDialog(
+    t(product ? "edit_product" : "new_product"),
+    t("product_form"),
+  );
+}
+
+function movementDialog(kind = "purchase", productId, originalId) {
+  if (!state.products.some((product) => product.active)) {
+    notify(t("no_products"));
+    return;
+  }
+
+  mode = "movement";
+  requestKey = crypto.randomUUID();
+  const kindOptions = ["purchase", "sale", "return", "loss", "gain"]
+    .map(
+      (option) => `
+        <option value="${option}" ${option === kind ? "selected" : ""}>
+          ${t(option)}
+        </option>
+      `,
+    )
+    .join("");
+
+  $("#editor-fields").innerHTML = `
+    <div class="form-grid">
+      <label class="wide">
+        ${t("type")}
+        <select name="kind" id="move-kind">${kindOptions}</select>
+      </label>
+      <div id="move-details" class="wide"></div>
+    </div>
+  `;
+  moveDetails(kind, productId, originalId);
+  showDialog(t("new_movement").replace(" ↗", ""), t("movement_form"));
+}
+
+function returnFields(activeProducts, originalId) {
+  const activeIds = new Set(activeProducts.map((product) => product.id));
+  const sales = state.returnable.filter((sale) =>
+    activeIds.has(sale.product_id),
+  );
+  const saleOptions = sales
+    .map(
+      (sale) => `
+        <option
+          value="${sale.id}"
+          ${sale.id === originalId ? "selected" : ""}
+        >
+          #${sale.id} · ${escapeHtml(sale.name)} ·
+          ${sale.returnable} ${t("refund_left")}
+        </option>
+      `,
+    )
+    .join("");
+
+  return `
+    <label class="wide">
+      ${t("sale_reference")}
+      <select name="original_id" required>
+        <option value="">${t("choose")}</option>
+        ${saleOptions}
+      </select>
+    </label>
+    ${input(
+      "quantity",
+      "quantity",
+      1,
+      'type="number" min="1" max="1000000" step="1" required',
+    )}
+    ${input("reason", "note", "", 'maxlength="300"', true)}
+    <small class="wide">
+      ${t(sales.length ? "return_hint" : "no_returns")}
+    </small>
+  `;
+}
+
+function standardMovementFields(kind, activeProducts, productId) {
+  const selectedProduct =
+    activeProducts.find((product) => product.id === Number(productId)) ||
+    activeProducts[0];
+  const productOptions = activeProducts
+    .map(
+      (product) => `
+        <option
+          value="${product.id}"
+          ${product.id === selectedProduct.id ? "selected" : ""}
+        >
+          ${escapeHtml(product.name)} ·
+          ${product.quantity} ${t("available")}
+        </option>
+      `,
+    )
+    .join("");
+  const priceField =
+    kind === "loss"
+      ? ""
+      : input(
+          kind === "sale" ? "unit_price" : "unit_cost",
+          "unit_price",
+          kind === "sale"
+            ? (selectedProduct.price_cents / 100).toFixed(2)
+            : "",
+          'type="number" min="0" max="10000000" step="0.01" required',
+        );
+  const isAdjustment = ["loss", "gain"].includes(kind);
+  const noteAttributes = `maxlength="300" ${isAdjustment ? "required" : ""}`;
+
+  return `
+    <label class="wide">
+      ${t("product")}
+      <select name="product_id" id="move-product" required>
+        ${productOptions}
+      </select>
+    </label>
+    ${input(
+      "quantity",
+      "quantity",
+      1,
+      'type="number" min="1" max="1000000" step="1" required',
+    )}
+    ${priceField}
+    ${input("reason", "note", "", noteAttributes, true)}
+    <small class="wide">
+      ${t(isAdjustment ? "adjustment_hint" : "move_hint")}
+    </small>
+  `;
+}
+
+function moveDetails(kind, productId, originalId) {
+  const activeProducts = state.products.filter((product) => product.active);
+  const fields =
+    kind === "return"
+      ? returnFields(activeProducts, originalId)
+      : standardMovementFields(kind, activeProducts, productId);
+
+  $("#move-details").innerHTML = `
+    <div class="form-grid">${fields}</div>
+  `;
+}
+$("#editor-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  $("#form-error").textContent = "";
+  $("#save").disabled = true;
+  const data = Object.fromEntries(new FormData(event.currentTarget));
+  try {
+    if (mode === "product") {
+      data.minimum = Number(data.minimum);
+      data.active = editingId
+        ? $('#editor-form [name="active"]').checked
+        : true;
+      await api(
+        editingId ? `/api/products/${editingId}` : "/api/products",
+        editingId ? "PUT" : "POST",
+        data,
+      );
+    } else {
+      data.quantity = Number(data.quantity);
+      data.request_key = requestKey;
+      if (data.kind === "return") {
+        const sale = state.returnable.find(
+          (m) => m.id === Number(data.original_id),
+        );
+        data.product_id = sale?.product_id;
+        data.original_id = Number(data.original_id);
+      } else data.product_id = Number(data.product_id);
+      await api("/api/movements", "POST", data);
+    }
+    $("#editor").close();
+    notify(t("saved"));
+    await refresh();
+  } catch (error) {
+    if ($("#editor").open) $("#form-error").textContent = errorText(error);
+    else notify(errorText(error));
+  } finally {
+    $("#save").disabled = false;
+  }
+});
+$("#editor").addEventListener("change", (event) => {
+  if (event.target.id === "move-kind") moveDetails(event.target.value);
+  if (event.target.id === "move-product" && $("#move-kind").value === "sale") {
+    const p = state.products.find((p) => p.id === Number(event.target.value));
+    $('#editor-form [name="unit_price"]').value = (p.price_cents / 100).toFixed(
+      2,
+    );
+  }
+});
+$("#add-product").onclick = () => productDialog();
+$("#add-movement").onclick = () => movementDialog();
+$("#close-dialog").onclick = $("#cancel-dialog").onclick = () =>
+  $("#editor").close();
+$("#period").onsubmit = async (event) => {
+  event.preventDefault();
+  try {
+    await refresh();
+  } catch (error) {
+    notify(errorText(error));
   }
 };
-let lang;
-try { lang = localStorage.getItem('stock-language') === 'en' ? 'en' : 'pt'; } catch { lang = 'pt'; }
-let state, page = 'overview', mode, editingId, requestKey, toastTimer;
-const t = key => words[lang][key] || key;
-const cash = cents => cents == null ? '—' : new Intl.NumberFormat(lang === 'pt' ? 'pt-BR' : 'en-GB', {style:'currency',currency:'BRL'}).format(cents / 100);
-const number = value => new Intl.NumberFormat(lang === 'pt' ? 'pt-BR' : 'en-GB', {maximumFractionDigits:2}).format(value);
-const pct = value => value == null ? '—' : `${number(value)}%`;
-const formattedDate = value => new Intl.DateTimeFormat(lang === 'pt' ? 'pt-BR' : 'en-GB').format(new Date(`${value}T12:00:00`));
-const errorText = error => t(error.message in words[lang] ? error.message : 'unexpected');
-
-async function api(path, method='GET', payload) {
-  let response;
-  try { response = await fetch(path, {method, headers:payload === undefined ? {} : {'Content-Type':'application/json','X-CSRF-Token':state?.csrf_token || ''}, body:payload === undefined ? undefined : JSON.stringify(payload)}); }
-  catch { throw new Error('connection'); }
-  if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.error || 'unexpected'); }
-  return response.json();
-}
-function notify(message) { $('#toast').textContent=message; $('#toast').hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>$('#toast').hidden=true,5000); }
-function query() { return new URLSearchParams({start:$('#start').value,end:$('#end').value}).toString(); }
-async function refresh() { state=await api(`/api/state?${query()}`); render(); }
-function setLanguage() {
-  document.documentElement.lang=lang === 'pt' ? 'pt-BR' : 'en';
-  document.title=`Estoque Local · ${t(page)}`;
-  $('#language').value=lang;
-  document.querySelector('nav').setAttribute('aria-label',lang === 'pt' ? 'Principal' : 'Main');
-  document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));
-}
-function render() {
-  page=['overview','products','movements','rankings','guide'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'overview';
-  setLanguage();
-  document.querySelectorAll('[data-page]').forEach(el=>{el.classList.toggle('active',el.dataset.page===page);if(el.dataset.page===page)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
-  $('#page-title').textContent=t(page); $('#page-kicker').textContent=t(`${page}_k`); $('#page-description').textContent=t(`${page}_d`);
-  $('#demo-banner').hidden=!state.demo; $('#demo-banner').textContent=t('demo_banner');
-  $('#period').hidden=['guide'].includes(page);
-  if (page==='guide') { $('#content').innerHTML=guide(); return; }
-  if (!state.products.length) {
-    $('#content').innerHTML=`<div class="empty"><p class="eyebrow">00 / ESTOQUE LOCAL</p><h2>${t('empty_title')}</h2><p>${t('empty_body')}</p><button class="primary" data-action="new-product">${t('new_product')}</button><button class="secondary" data-action="demo">${t('demo')}</button></div>`; return;
-  }
-  $('#content').innerHTML=({overview,products:productsPage,movements:movementsPage,rankings:rankingsPage}[page])();
-  if(page==='products') filterProducts();
-  if(page==='movements') filterMovements();
-}
-function metric(label,value,hint,positive=false) { return `<div class="metric ${positive?'positive':''}"><p class="metric-label">${t(label)}</p><strong>${esc(value)}</strong><small>${esc(hint)}</small></div>`; }
-function rankedRows(rows,field,format) {
-  return rows.length ? rows.slice(0,5).map((p,i)=>`<div class="rank-row"><span class="rank-number">${String(i+1).padStart(2,'0')}</span><div><b>${esc(p.name)}</b><small>${esc(p.sku)} / ${number(p.sold)} ${t('units')} · ${t('margin')} ${pct(p.margin)}</small></div><div class="rank-value ${p[field]<0?'negative':''}">${esc(format(p[field]))}</div></div>`).join('') : `<p class="definition">${t('no_eligible')}</p>`;
-}
-function sorted(field,ascending=false,filter=()=>true) {return state.products.filter(p=>(p.active || p.sold!==0 || p.revenue!==0 || p.purchases!==0) && filter(p)).sort((a,b)=>(ascending?a[field]-b[field]:b[field]-a[field]) || a.name.localeCompare(b.name));}
-function ranking(title,field,format,description,ascending=false,filter=()=>true) {return `<section class="panel"><p class="panel-caption">${t(description==='rank_cost'||description==='rank_capital'?'current_balance':'period')}</p><h2>${t(title)}</h2>${rankedRows(sorted(field,ascending,filter),field,format)}<p class="definition">${t(description)}</p></section>`;}
-function overview() {
-  const s=state.totals;
-  const low=state.products.filter(p=>p.active && p.quantity<=p.minimum).sort((a,b)=>a.quantity-b.quantity);
-  const rows=state.daily;
-  const max=Math.max(1,...rows.map(d=>Math.abs(d.revenue)));
-  const chart=rows.length ? `<svg viewBox="0 0 600 140" class="chart" role="img" aria-label="${t('revenue_chart')}"><line x1="0" x2="600" y1="105" y2="105" stroke="#b4c2ab"/>${rows.map((d,i)=>{const height=Math.max(1,Math.abs(d.revenue)/max*85);return `<rect x="${10+i*(580/rows.length)}" y="${d.revenue>=0?105-height:105}" width="${Math.max(1,580/rows.length-6)}" height="${d.revenue>=0?height:height*.3}"><title>${esc(formattedDate(d.day))}: ${esc(cash(d.revenue))}</title></rect>`;}).join('')}</svg><div class="chart-axis"><span>${formattedDate(rows[0].day)}</span><span>${formattedDate(rows.at(-1).day)}</span></div>` : `<p class="definition">${t('no_data')}</p>`;
-  return `<div class="metrics">${metric('revenue',cash(s.revenue),t('net_returns'))}${metric('profit',cash(s.profit),`${t('margin')}: ${pct(s.margin)}`,true)}${metric('stock_value',cash(s.stock_value),t('current_note'))}${metric('low_stock',number(s.low_stock),t('products_unit'))}</div>
-  <div class="two-columns"><section class="panel"><div class="section-head"><div><h2>${t('sales_rhythm')}</h2><p>${t('revenue_chart')}</p></div></div>${chart}</section><section class="panel green"><h2>${t('purchase_title')}</h2><dl class="number-list"><div><dt>${t('purchases')}</dt><dd>${cash(s.purchases)}</dd></div><div><dt>${t('cogs')}</dt><dd>${cash(s.cogs)}</dd></div><div><dt>${t('net_units')}</dt><dd>${number(s.sold)}</dd></div><div><dt>${t('losses')}</dt><dd>${cash(s.losses)}</dd></div></dl></section></div>
-  <div class="two-columns">${ranking('top_sellers','sold',n=>`${number(n)} ${t('units')}`,'rank_qty')}${ranking('top_profit','profit',cash,'rank_profit',false,p=>p.revenue!==0 || p.cogs!==0)}</div><div class="section-head"><a class="quiet" href="#rankings">${t('see_rankings')}</a></div>
-  <section class="panel"><div class="section-head"><div><h2>${t('alerts')}</h2><p>${t('below_min')}</p></div><a href="#products" class="quiet">${t('view_products')}</a></div>${low.length?`<div class="table-wrap"><table><thead><tr><th>${t('product')}</th><th class="num">${t('stock')}</th><th class="num">${t('minimum')}</th><th></th></tr></thead><tbody>${low.map(p=>`<tr><td><strong>${esc(p.name)}</strong><small>${esc(p.sku)}</small></td><td class="num negative">${p.quantity}</td><td class="num">${p.minimum}</td><td class="num"><button class="text-link" data-buy="${p.id}">${t('purchase')} ↗</button></td></tr>`).join('')}</tbody></table></div>`:`<p class="definition">${t('all_good')}</p>`}</section><div class="callout"><h3>${t('profit')}</h3><p>${t('gross_note')}. ${lang==='pt'?'Despesas operacionais, impostos sobre vendas e taxas não são descontados. As perdas de estoque aparecem separadamente.':'Operating expenses, sales taxes and fees are not deducted. Inventory losses are shown separately.'}</p></div>`;
-}
-function productsPage() {
-  const categories=[...new Set(state.products.map(p=>p.category).filter(Boolean))].sort();
-  return `<div class="table-tools"><input id="product-search" placeholder="${t('search')}" aria-label="${t('search')}"><select id="category-filter" aria-label="${t('category')}"><option value="">${t('all_categories')}</option>${categories.map(c=>`<option>${esc(c)}</option>`).join('')}</select><label class="pill-check"><input type="checkbox" id="low-filter">${t('only_low')}</label><label class="pill-check"><input type="checkbox" id="archive-filter">${t('show_archived')}</label><a class="quiet" href="/api/export/products?${query()}">${t('csv')}</a></div><div class="table-wrap"><table><thead><tr><th>${t('product')}</th><th>${t('category')}</th><th class="num">${t('stock')}</th><th class="num">${t('avg_cost')}</th><th class="num">${t('sale_price')}</th><th class="num">${t('inventory')}</th><th>${t('status')}</th><th>${t('actions')}</th></tr></thead><tbody id="product-rows"></tbody></table></div><p class="definition">${t('current_note')}. ${t('export_note')}</p>`;
-}
-function filterProducts() {
-  const term=$('#product-search').value.toLocaleLowerCase();
-  const rows=state.products.filter(p=>(!term || `${p.name} ${p.sku} ${p.supplier}`.toLocaleLowerCase().includes(term)) && (!$('#category-filter').value || p.category===$('#category-filter').value) && (!$('#low-filter').checked || (p.active && p.quantity<=p.minimum)) && ($('#archive-filter').checked || p.active));
-  $('#product-rows').innerHTML=rows.length?rows.map(p=>`<tr><td><strong>${esc(p.name)}</strong><small>${esc(p.sku)}${p.supplier?` / ${esc(p.supplier)}`:''}</small></td><td>${esc(p.category)||'—'}</td><td class="num">${p.quantity}<small>${t('minimum')} ${p.minimum}</small></td><td class="num">${cash(p.average_cents)}</td><td class="num">${cash(p.price_cents)}</td><td class="num">${cash(p.value_cents)}</td><td><span class="tag ${!p.active?'muted':p.quantity<=p.minimum?'warn':''}">${t(!p.active?'archived':p.quantity<=p.minimum?'replenish':'regular')}</span></td><td><button class="text-link" data-edit="${p.id}">${t('edit')}</button></td></tr>`).join(''):`<tr><td colspan="8">${t('no_data')}</td></tr>`;
-}
-function movementsPage() {return `<div class="table-tools"><input id="movement-search" placeholder="${t('search')}" aria-label="${t('search')}"><select id="kind-filter" aria-label="${t('type')}"><option value="">${t('all_types')}</option>${['purchase','sale','return','loss','gain'].map(k=>`<option value="${k}">${t(k)}</option>`).join('')}</select><a class="quiet" href="/api/export/movements?${query()}">${t('csv')}</a></div><div class="table-wrap"><table><thead><tr><th># / ${t('date')}</th><th>${t('product')}</th><th>${t('type')}</th><th class="num">${t('quantity')}</th><th class="num">${t('cost')}</th><th class="num">${t('revenue_short')}</th><th>${t('note')}</th><th></th></tr></thead><tbody id="movement-rows"></tbody></table></div><p class="definition">${t('ledger_note')}</p>`;}
-function filterMovements() {
-  const term=$('#movement-search').value.toLocaleLowerCase();
-  const rows=state.movements.filter(m=>(!$('#kind-filter').value || m.kind===$('#kind-filter').value) && (!term || `${m.name} ${m.sku} ${m.note}`.toLocaleLowerCase().includes(term)));
-  $('#movement-rows').innerHTML=rows.length?rows.map(m=>`<tr><td><strong>#${m.id}</strong><small>${formattedDate(m.occurred_on)}</small></td><td>${esc(m.name)}<small>${esc(m.sku)}</small></td><td><span class="tag ${m.kind==='loss'?'warn':''}">${t(m.kind)}</span>${m.original_id?`<small>↳ #${m.original_id}</small>`:''}</td><td class="num">${m.stock_delta>0?'+':''}${m.stock_delta}</td><td class="num">${cash(m.cost_delta)}</td><td class="num ${m.revenue_delta<0?'negative':''}">${m.kind==='sale'||m.kind==='return'?cash(m.revenue_delta):'—'}</td><td>${esc(m.note)}</td><td>${m.kind==='sale'&&m.returnable>0?`<button class="text-link" data-return="${m.id}">${t('returned')}</button><small>${m.returnable} ${t('refund_left')}</small>`:''}</td></tr>`).join(''):`<tr><td colspan="8">${t('no_data')}</td></tr>`;
-}
-function rankingsPage() {return `<div class="table-tools"><p class="definition">${formattedDate(state.start)} → ${formattedDate(state.end)}</p><button class="quiet" data-action="print">${t('print')} ↗</button><a class="quiet" href="/api/export/products?${query()}">${t('csv')}</a></div><div class="rankings-grid">${ranking('top_sellers','sold',n=>`${number(n)} ${t('units')}`,'rank_qty')}${ranking('slow_sellers','sold',n=>`${number(n)} ${t('units')}`,'rank_qty',true,p=>Boolean(p.active))}${ranking('top_profit','profit',cash,'rank_profit',false,p=>p.revenue!==0||p.cogs!==0)}${ranking('top_margin','margin',pct,'rank_margin',false,p=>p.revenue>0)}${ranking('high_cost','average_cents',cash,'rank_cost',false,p=>p.quantity>0)}${ranking('top_spend','purchases',cash,'rank_spend',false,p=>p.purchases>0)}${ranking('locked_capital','value_cents',cash,'rank_capital',false,p=>p.quantity>0)}</div><section class="panel report-detail"><div class="section-head"><div><h2>${lang==='pt'?'Resultado por produto':'Results by product'}</h2><p>${t('gross_note')}. ${t('net_returns')}.</p></div></div><div class="table-wrap"><table><thead><tr><th>${t('product')}</th><th class="num">${t('net_units')}</th><th class="num">${t('revenue_short')}</th><th class="num">${t('cogs')}</th><th class="num">${t('profit')}</th><th class="num">${t('margin')}</th><th class="num">${t('purchases')}</th></tr></thead><tbody>${sorted('profit').map(p=>`<tr><td>${esc(p.name)}<small>${esc(p.sku)}</small></td><td class="num">${number(p.sold)}</td><td class="num">${cash(p.revenue)}</td><td class="num">${cash(p.cogs)}</td><td class="num ${p.profit<0?'negative':'positive'}">${cash(p.profit)}</td><td class="num">${pct(p.margin)}</td><td class="num">${cash(p.purchases)}</td></tr>`).join('')}</tbody></table></div></section>`;}
-function guide() {
-  const pt=lang==='pt';
-  const articles=pt ? [
-    ['Comece pelo que entrou','Cadastre nome, código, categoria, fornecedor, preço de venda e estoque mínimo. Depois registre uma compra com quantidade e custo unitário. O estoque inicial também deve ser registrado como entrada, nunca digitado por cima do saldo.'],
-    ['Custo médio, sem reescrever o passado','Cada entrada soma seu custo ao valor que já está no estoque. Uma saída recebe sua proporção desse valor, arredondada ao centavo. A última unidade leva os centavos restantes. Esse custo fica gravado na venda; uma compra futura não altera o resultado de vendas anteriores. O método segue a ideia de custo médio ponderado citada no <a href="https://www.cpc.org.br/CPC/Documentos-emitidos/Pronunciamentos/Pronunciamento?Id=47" target="_blank" rel="noreferrer">CPC 16</a>. O aplicativo é um controle gerencial e não implementa todos os requisitos contábeis da norma.'],
-    ['O que os rankings respondem','Mais e menos vendidos usam quantidade líquida, incluindo devoluções registradas no período. Produtos ativos sem vendas entram no ranking de menos vendidos. Lucro bruto é receita menos custo histórico das unidades vendidas. Margem é lucro bruto dividido pela receita; sem receita positiva, a margem fica em branco. O custo médio e o valor do saldo mostram a situação atual. Gasto em compras considera o período selecionado. Empates são ordenados pelo nome do produto. Os rankings mostram até cinco produtos; o CSV traz o catálogo completo.'],
-    ['Compra, venda e lucro não são a mesma coisa','Comprar R$ 1.000 em mercadoria não significa ter R$ 1.000 de custo de vendas naquele dia. Parte pode continuar em estoque. O lucro bruto mostrado não desconta aluguel, salários, taxas ou impostos sobre vendas. Perdas são baixas de estoque e aparecem separadamente. Custo de entrada deve representar o custo que você deseja atribuir à unidade, incluindo frete rateado quando aplicável. Não há rateio automático.'],
-    ['Devoluções e correções','Uma devolução referencia a venda original, devolve as unidades ao estoque e estorna o preço e o custo daquela venda. Devoluções parciais são permitidas até a quantidade vendida. Para corrigir uma venda errada, devolva e registre novamente. Para perdas ou diferenças de contagem, use os ajustes com motivo obrigatório. Compras e ajustes não podem ser apagados ou editados; corrija o saldo por um ajuste identificado. Isso não reescreve gasto histórico em compras. Se precisar corrigir o histórico financeiro, este projeto ainda não oferece estorno de compra.'],
-    ['Datas e arquivos','Movimentos usam a data local do computador que roda o servidor. Não há lançamento retroativo, pois isso exigiria recalcular os custos posteriores. O período inclui as datas inicial e final; devoluções contam na data em que foram registradas, mesmo que a venda seja de outro período. O CSV usa cabeçalhos estáveis em inglês e valores em centavos. Textos que poderiam virar fórmulas em planilhas recebem um apóstrofo.'],
-    ['Seus dados ficam aqui','O banco fica em <code>data/stock.sqlite3</code>. Baixar backup gera uma cópia consistente; guarde-a fora deste computador. Para restaurar, pare o servidor, preserve o banco atual e copie o backup para esse caminho. Os dados de demonstração só entram com catálogo vazio e permanecem identificados. Não há botão que apague o histórico. Este aplicativo foi feito para uso local, por uma pessoa, sem login e sem serviço externo. Não o exponha diretamente à internet.']
-  ] : [
-    ['Start with incoming stock','Add a name, code, category, supplier, selling price and minimum quantity. Then record a purchase with its quantity and unit cost. Opening stock must also be recorded as an incoming movement, never typed over the balance.'],
-    ['Average cost, with a lasting history','Each receipt adds its cost to existing inventory value. An outgoing movement receives its proportion of that value, rounded to a cent. The last unit receives the remaining cents. This cost is saved with the sale; later purchases never change earlier sales results. The method uses the weighted-average concept described in <a href="https://www.cpc.org.br/CPC/Documentos-emitidos/Pronunciamentos/Pronunciamento?Id=47" target="_blank" rel="noreferrer">CPC 16</a>. This is a management tool and does not implement every accounting requirement of that standard.'],
-    ['What the rankings answer','Best and slowest sellers use net quantities, including returns recorded in the period. Active products with no sales are included in the slowest-seller ranking. Gross profit is revenue less historical cost of units sold. Margin is gross profit divided by revenue; without positive revenue, it is left blank. Average cost and stock value show current balances. Purchase spending uses the selected period. Ties are sorted by product name. Rankings show up to five products; the CSV includes the full catalogue.'],
-    ['Purchasing, selling and earning are different','Buying R$1,000 of goods does not mean R$1,000 of cost of sales that day. Some goods may remain in stock. Gross profit does not deduct rent, wages, fees or sales taxes. Stock losses are reported separately. Incoming unit cost should include the costs you want assigned to each unit, including allocated freight where appropriate. There is no automatic cost allocation.'],
-    ['Returns and corrections','A return references the original sale, restores units to stock and reverses their original selling price and cost. Partial returns are allowed up to the quantity sold. To correct a mistaken sale, return it and record a replacement. For damage or counting differences, use adjustments with a required reason. Purchases and adjustments cannot be deleted or edited; use an identified adjustment to correct stock. That does not change historical purchase spending. Purchase reversals for financial-history corrections are not available in this version.'],
-    ['Dates and files','Movements use the local date of the computer running the server. Backdating is unavailable because it would require recalculating later costs. The period includes both start and end dates. Returns count on their recorded date, even if the sale was in another period. CSV files use stable English headers and monetary values in cents. Text that could become a spreadsheet formula is prefixed with an apostrophe.'],
-    ['Your data stays here','The database is <code>data/stock.sqlite3</code>. Download backup creates a consistent copy; keep it outside this computer. To restore, stop the server, preserve the current database and copy the backup to that path. Demo data can only be loaded into an empty catalogue and remains labelled. There is no delete-history button. This is a local, single-user application, without accounts or external services. Do not expose it directly to the internet.']
-  ];
-  return `<div class="guide">${articles.map(([title,body],i)=>`<article><p class="eyebrow">${String(i+1).padStart(2,'0')}</p><h2>${title}</h2><p>${body}</p></article>`).join('')}</div>`;
-}
-function input(label,name,value='',extra='',wide=false) {return `<label class="${wide?'wide':''}">${t(label)}<input name="${name}" value="${esc(value)}" ${extra}></label>`;}
-function showDialog(title,kicker) {$('#dialog-title').textContent=title;$('#dialog-kicker').textContent=kicker;$('#form-error').textContent='';$('#save').disabled=false;$('#editor').showModal();}
-function productDialog(id) {
-  mode='product'; editingId=id;const p=state.products.find(p=>p.id===id);
-  $('#editor-fields').innerHTML=`<div class="form-grid">${input('name','name',p?.name||'','maxlength="120" required',true)}${input('sku','sku',p?.sku||'','maxlength="40" required')}${input('category','category',p?.category||'','maxlength="60"')}${input('supplier','supplier',p?.supplier||'','maxlength="120"',true)}${input('sale_price','price',p?(p.price_cents/100).toFixed(2):'','type="number" min="0" max="10000000" step="0.01" required')}${input('minimum','minimum',p?.minimum ?? 0,'type="number" min="0" max="1000000" step="1" required')}<small class="wide">${t('price_hint')}</small>${p?`<label class="checkbox wide"><input name="active" type="checkbox" ${p.active?'checked':''}>${t('active')}</label>`:''}</div>`;
-  showDialog(t(p?'edit_product':'new_product'),t('product_form'));
-}
-function movementDialog(kind='purchase',productId,originalId) {
-  if(!state.products.some(p=>p.active)) {notify(t('no_products'));return;}
-  mode='movement';requestKey=crypto.randomUUID();
-  $('#editor-fields').innerHTML=`<div class="form-grid"><label class="wide">${t('type')}<select name="kind" id="move-kind">${['purchase','sale','return','loss','gain'].map(k=>`<option value="${k}" ${k===kind?'selected':''}>${t(k)}</option>`).join('')}</select></label><div id="move-details" class="wide"></div></div>`;
-  moveDetails(kind,productId,originalId);showDialog(t('new_movement').replace(' ↗',''),t('movement_form'));
-}
-function moveDetails(kind,productId,originalId) {
-  const active=state.products.filter(p=>p.active);
-  const p=active.find(p=>p.id===Number(productId)) || active[0];
-  let html;
-  if(kind==='return') {
-    const sales=state.returnable.filter(m=>active.some(p=>p.id===m.product_id));
-    html=`<label class="wide">${t('sale_reference')}<select name="original_id" required><option value="">${t('choose')}</option>${sales.map(m=>`<option value="${m.id}" data-product="${m.product_id}" data-max="${m.returnable}" ${m.id===originalId?'selected':''}>#${m.id} · ${esc(m.name)} · ${m.returnable} ${t('refund_left')}</option>`).join('')}</select></label>${input('quantity','quantity',1,'type="number" min="1" max="1000000" step="1" required')}${input('reason','note','','maxlength="300"',true)}<small class="wide">${t(sales.length?'return_hint':'no_returns')}</small>`;
-  } else {
-    html=`<label class="wide">${t('product')}<select name="product_id" id="move-product" required>${active.map(x=>`<option value="${x.id}" ${p.id===x.id?'selected':''}>${esc(x.name)} · ${x.quantity} ${t('available')}</option>`).join('')}</select></label>${input('quantity','quantity',1,`type="number" min="1" max="1000000" step="1" required`)}${kind!=='loss'?input(kind==='sale'?'unit_price':'unit_cost','unit_price',kind==='sale'?(p.price_cents/100).toFixed(2):'','type="number" min="0" max="10000000" step="0.01" required'):''}${input('reason','note','','maxlength="300" '+(['loss','gain'].includes(kind)?'required':''),true)}<small class="wide">${t(['loss','gain'].includes(kind)?'adjustment_hint':'move_hint')}</small>`;
-  }
-  $('#move-details').innerHTML=`<div class="form-grid">${html}</div>`;
-}
-$('#editor-form').addEventListener('submit',async event=>{
-  event.preventDefault();$('#form-error').textContent='';$('#save').disabled=true;
-  const data=Object.fromEntries(new FormData(event.currentTarget));
+$("#last-30").onclick = async () => {
+  const end = new Date(`${state.today}T12:00:00`);
+  const first = new Date(end);
+  first.setDate(first.getDate() - 29);
+  $("#start").value =
+    `${first.getFullYear()}-${String(first.getMonth() + 1).padStart(2, "0")}-${String(first.getDate()).padStart(2, "0")}`;
+  $("#end").value = state.today;
   try {
-    if(mode==='product') {
-      data.minimum=Number(data.minimum);data.active=editingId?$('#editor-form [name="active"]').checked:true;
-      await api(editingId?`/api/products/${editingId}`:'/api/products',editingId?'PUT':'POST',data);
-    } else {
-      data.quantity=Number(data.quantity);data.request_key=requestKey;
-      if(data.kind==='return') {const sale=state.returnable.find(m=>m.id===Number(data.original_id));data.product_id=sale?.product_id;data.original_id=Number(data.original_id);}
-      else data.product_id=Number(data.product_id);
-      await api('/api/movements','POST',data);
+    await refresh();
+  } catch (error) {
+    notify(errorText(error));
+  }
+};
+$("#language").onchange = () => {
+  lang = $("#language").value;
+  saveLanguage(lang);
+  if (state) render();
+  else setLanguage();
+};
+window.addEventListener("hashchange", () => {
+  if (state) render();
+});
+$("#content").addEventListener("input", (event) => {
+  if (
+    [
+      "product-search",
+      "category-filter",
+      "low-filter",
+      "archive-filter",
+    ].includes(event.target.id)
+  )
+    filterProducts();
+  if (["movement-search", "kind-filter"].includes(event.target.id))
+    filterMovements();
+});
+$("#content").addEventListener("click", async (event) => {
+  const button = event.target.closest("button");
+  if (!button) return;
+  if (button.hasAttribute("data-edit"))
+    productDialog(Number(button.dataset.edit));
+  if (button.hasAttribute("data-buy"))
+    movementDialog("purchase", Number(button.dataset.buy));
+  if (button.hasAttribute("data-return"))
+    movementDialog("return", undefined, Number(button.dataset.return));
+  if (button.dataset.action === "new-product") productDialog();
+  if (button.dataset.action === "print") window.print();
+  if (button.dataset.action === "demo" && window.confirm(t("demo_confirm"))) {
+    button.disabled = true;
+    try {
+      await api("/api/demo", "POST", {});
+      await refresh();
+    } catch (error) {
+      notify(errorText(error));
+      button.disabled = false;
     }
-    $('#editor').close();notify(t('saved'));await refresh();
-  } catch(error) {if($('#editor').open)$('#form-error').textContent=errorText(error);else notify(errorText(error));}
-  finally {$('#save').disabled=false;}
-});
-$('#editor').addEventListener('change',event=>{
-  if(event.target.id==='move-kind') moveDetails(event.target.value);
-  if(event.target.id==='move-product' && $('#move-kind').value==='sale') {
-    const p=state.products.find(p=>p.id===Number(event.target.value));$('#editor-form [name="unit_price"]').value=(p.price_cents/100).toFixed(2);
   }
 });
-$('#add-product').onclick=()=>productDialog();$('#add-movement').onclick=()=>movementDialog();
-$('#close-dialog').onclick=$('#cancel-dialog').onclick=()=>$('#editor').close();
-$('#period').onsubmit=async event=>{event.preventDefault();try{await refresh();}catch(error){notify(errorText(error));}};
-$('#last-30').onclick=async()=>{const end=new Date(`${state.today}T12:00:00`);const first=new Date(end);first.setDate(first.getDate()-29);$('#start').value=`${first.getFullYear()}-${String(first.getMonth()+1).padStart(2,'0')}-${String(first.getDate()).padStart(2,'0')}`;$('#end').value=state.today;try{await refresh();}catch(error){notify(errorText(error));}};
-$('#language').onchange=()=>{lang=$('#language').value;try{localStorage.setItem('stock-language',lang);}catch{}if(state)render();else setLanguage();};
-window.addEventListener('hashchange',()=>{if(state)render();});
-$('#content').addEventListener('input',event=>{if(['product-search','category-filter','low-filter','archive-filter'].includes(event.target.id))filterProducts();if(['movement-search','kind-filter'].includes(event.target.id))filterMovements();});
-$('#content').addEventListener('click',async event=>{
-  const button=event.target.closest('button');if(!button)return;
-  if(button.hasAttribute('data-edit'))productDialog(Number(button.dataset.edit));
-  if(button.hasAttribute('data-buy'))movementDialog('purchase',Number(button.dataset.buy));
-  if(button.hasAttribute('data-return'))movementDialog('return',undefined,Number(button.dataset.return));
-  if(button.dataset.action==='new-product')productDialog();
-  if(button.dataset.action==='print')window.print();
-  if(button.dataset.action==='demo' && window.confirm(t('demo_confirm'))) {
-    button.disabled=true;try{await api('/api/demo','POST',{});await refresh();}catch(error){notify(errorText(error));button.disabled=false;}
-  }
-});
-(async()=>{
+(async () => {
   setLanguage();
-  try {state=await api('/api/state');$('#start').value=state.start;$('#end').value=state.end;render();}
-  catch(error) {$('#content').textContent=errorText(error);}
+  try {
+    state = await api("/api/state");
+    $("#start").value = state.start;
+    $("#end").value = state.end;
+    render();
+  } catch (error) {
+    $("#content").textContent = errorText(error);
+  }
 })();
