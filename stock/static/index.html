@@ -1,33 +1,124 @@
 <!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Estoque Local — inventory, purchases and product results.">
-  <title>Estoque Local</title><link rel="icon" href="data:,">
-  <link rel="stylesheet" href="/assets/style.css"><script src="/assets/app.js" defer></script>
-</head>
-<body>
-  <aside class="sidebar">
-    <a href="#overview" class="brand">Estoque Local</a>
-    <nav aria-label="Principal">
-      <a href="#overview" data-page="overview"><strong data-i18n="overview">Visão geral</strong></a>
-      <a href="#products" data-page="products"><strong data-i18n="products">Produtos</strong></a>
-      <a href="#movements" data-page="movements"><strong data-i18n="movements">Movimentações</strong></a>
-      <a href="#rankings" data-page="rankings"><strong data-i18n="rankings">Rankings</strong></a>
-      <a href="#guide" data-page="guide"><strong data-i18n="guide">Como funciona</strong></a>
-    </nav>
-  </aside>
-  <div class="workspace">
-    <header class="topbar"><span class="eyebrow" data-i18n="notebook">ESTOQUE & RESULTADO</span><div class="top-actions"><a href="/api/backup" class="quiet" data-i18n="backup">Baixar backup</a><label class="language"><span class="sr-only" data-i18n="language">Idioma</span><select id="language"><option value="pt">PT</option><option value="en">EN</option></select></label></div></header>
-    <main id="main">
-      <div id="demo-banner" class="notice" hidden></div>
-      <section class="page-heading"><div><p class="eyebrow" id="page-kicker"></p><h1 id="page-title">Visão geral</h1><p id="page-description"></p></div><div class="heading-actions"><button id="add-product" class="secondary" data-i18n="new_product">Novo produto</button><button id="add-movement" class="primary" data-i18n="new_movement">Registrar movimento ↗</button></div></section>
-      <form id="period" class="filters"><span class="filter-label" data-i18n="period">Período dos resultados</span><label><span data-i18n="from">De</span><input type="date" id="start" required></label><label><span data-i18n="to">Até</span><input type="date" id="end" required></label><button class="secondary" data-i18n="apply">Aplicar</button><button type="button" class="quiet" id="last-30" data-i18n="last_30">Últimos 30 dias</button></form>
-      <div id="content" aria-live="polite"><p data-i18n="loading">Carregando…</p></div>
-      <footer><span>Estoque Local · v0.1</span><span data-i18n="footer">Dados armazenados localmente.</span></footer>
-    </main>
-  </div>
-  <dialog id="editor"><form id="editor-form"><div class="dialog-top"><div><p class="eyebrow" id="dialog-kicker"></p><h2 id="dialog-title"></h2></div><button type="button" class="close" id="close-dialog" aria-label="Fechar / Close">×</button></div><div id="editor-fields"></div><p id="form-error" role="alert" class="form-error"></p><div class="dialog-actions"><button type="button" class="secondary" id="cancel-dialog" data-i18n="cancel">Cancelar</button><button type="submit" class="primary" id="save" data-i18n="save">Salvar registro</button></div></form></dialog>
-  <div id="toast" role="status" hidden></div>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Estoque Local — inventory, purchases and product results."
+    />
+    <title>Estoque Local</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/assets/style.css" />
+    <script type="module" src="/assets/app.js"></script>
+  </head>
+  <body>
+    <aside class="sidebar">
+      <a href="#overview" class="brand">Estoque Local</a>
+      <nav aria-label="Principal">
+        <a href="#overview" data-page="overview"
+          ><strong data-i18n="overview">Visão geral</strong></a
+        >
+        <a href="#products" data-page="products"
+          ><strong data-i18n="products">Produtos</strong></a
+        >
+        <a href="#movements" data-page="movements"
+          ><strong data-i18n="movements">Movimentações</strong></a
+        >
+        <a href="#rankings" data-page="rankings"
+          ><strong data-i18n="rankings">Rankings</strong></a
+        >
+        <a href="#guide" data-page="guide"
+          ><strong data-i18n="guide">Como funciona</strong></a
+        >
+      </nav>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <span class="eyebrow" data-i18n="notebook">ESTOQUE & RESULTADO</span>
+        <div class="top-actions">
+          <a href="/api/backup" class="quiet" data-i18n="backup"
+            >Baixar backup</a
+          ><label class="language"
+            ><span class="sr-only" data-i18n="language">Idioma</span
+            ><select id="language">
+              <option value="pt">PT</option>
+              <option value="en">EN</option>
+            </select></label
+          >
+        </div>
+      </header>
+      <main id="main">
+        <div id="demo-banner" class="notice" hidden></div>
+        <section class="page-heading">
+          <div>
+            <p class="eyebrow" id="page-kicker"></p>
+            <h1 id="page-title">Visão geral</h1>
+            <p id="page-description"></p>
+          </div>
+          <div class="heading-actions">
+            <button id="add-product" class="secondary" data-i18n="new_product">
+              Novo produto</button
+            ><button id="add-movement" class="primary" data-i18n="new_movement">
+              Registrar movimento ↗
+            </button>
+          </div>
+        </section>
+        <form id="period" class="filters">
+          <span class="filter-label" data-i18n="period"
+            >Período dos resultados</span
+          ><label
+            ><span data-i18n="from">De</span
+            ><input type="date" id="start" required /></label
+          ><label
+            ><span data-i18n="to">Até</span
+            ><input type="date" id="end" required /></label
+          ><button class="secondary" data-i18n="apply">Aplicar</button
+          ><button type="button" class="quiet" id="last-30" data-i18n="last_30">
+            Últimos 30 dias
+          </button>
+        </form>
+        <div id="content" aria-live="polite">
+          <p data-i18n="loading">Carregando…</p>
+        </div>
+        <footer>
+          <span>Estoque Local · v0.1</span
+          ><span data-i18n="footer">Dados armazenados localmente.</span>
+        </footer>
+      </main>
+    </div>
+    <dialog id="editor">
+      <form id="editor-form">
+        <div class="dialog-top">
+          <div>
+            <p class="eyebrow" id="dialog-kicker"></p>
+            <h2 id="dialog-title"></h2>
+          </div>
+          <button
+            type="button"
+            class="close"
+            id="close-dialog"
+            aria-label="Fechar / Close"
+          >
+            ×
+          </button>
+        </div>
+        <div id="editor-fields"></div>
+        <p id="form-error" role="alert" class="form-error"></p>
+        <div class="dialog-actions">
+          <button
+            type="button"
+            class="secondary"
+            id="cancel-dialog"
+            data-i18n="cancel"
+          >
+            Cancelar</button
+          ><button type="submit" class="primary" id="save" data-i18n="save">
+            Salvar registro
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <div id="toast" role="status" hidden></div>
+  </body>
 </html>
