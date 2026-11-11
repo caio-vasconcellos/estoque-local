@@ -624,4 +624,3 @@ export function guide() {
 
   return `<div class="guide">${articles}</div>`;
 }
-

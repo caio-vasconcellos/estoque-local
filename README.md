@@ -1,33 +1,66 @@
 # Estoque Local
 
-[Português](README.pt-BR.md)
+[PortuguÃªs](README.pt-BR.md)
 
-Stage 2 of 3: the local web application, built on the inventory core.
+A local web application for products, purchases, sales, partial returns,
+losses and incoming stock adjustments. The interface reports stock balances,
+revenue, cost of sales, gross profit, margin and product rankings.
 
-Manage products, purchases, sales, partial returns and stock adjustments.
-Compare seven product rankings, revenue, historical cost, gross profit and margin.
-Includes Portuguese and English, date filters, searches, CSV exports and backups.
+Data stays on the user's computer. The project has no accounts and is not
+designed to be exposed directly to the internet.
 
 ## Run
 
-Python 3.11 or later. On Windows:
+Python 3.11 or later is required. On Windows:
 
 ```powershell
 .\start.ps1 -Setup
 ```
 
-Open http://127.0.0.1:8765. After setup, double-click `start.cmd` or run `start.ps1`.
-On Linux/macOS, create a virtual environment, install `requirements.txt` and use
-`.venv/bin/python run.py`.
+Then open http://127.0.0.1:8765. For later runs, use `start.cmd` or
+`start.ps1`.
 
-The database is `data/stock.sqlite3`. This is a local, single-user application;
-do not expose it directly to the internet. Gross profit excludes operating
-expenses, sales taxes and fees. The interface explains the accounting rules
-under How it works. Runtime data and the virtual environment are excluded from Git.
+On Linux or macOS, create a virtual environment, install `requirements.txt`
+and run:
+
+```bash
+python run.py
+```
+
+The database is created at `data/stock.sqlite3`. The **Download backup**
+button creates a consistent copy of that database.
+
+## Main decisions
+
+- **SQLite:** one file is enough for this local, single-user application and no
+  database server has to be installed.
+- **Integer cents:** money never uses binary floating-point values, avoiding
+  rounding differences in totals and allocations.
+- **Transactions:** the stock balance and its movement history are committed
+  together; if either write fails, both are rolled back.
+- **Weighted-average cost:** incoming stock updates inventory value. A sale
+  keeps the cost calculated at that time, and a return restores the original
+  sale cost.
+
+See [docs/DOMAIN_RULES.md](docs/DOMAIN_RULES.md) for the complete rules and
+limits.
+
+## Structure
+
+- `stock/ledger.py`: database, validation and inventory rules;
+- `stock/web.py`: local HTTP API, CSV exports and backup;
+- `stock/static/`: JavaScript, HTML and CSS interface;
+- `tests/`: business scenarios and HTTP flow.
 
 ## Tests
 
-Install `requirements-dev.txt`, then run `python -m pytest -q` (28 tests).
-Use `node --check stock/static/app.js` to check JavaScript syntax.
+Install `requirements-dev.txt`, then run:
 
-Stage 3 adds complete bilingual documentation, screenshots and GitHub Actions.
+```text
+python -m pytest -q
+node --check stock/static/app.js
+node --check stock/static/views.js
+```
+
+The **How it works** page explains the displayed indicators. Gross profit does
+not deduct operating expenses, sales taxes or fees.
