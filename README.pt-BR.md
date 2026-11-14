@@ -11,6 +11,8 @@ rankings, exportação CSV e interface em português e inglês. Roda no seu
 computador, sem conta ou serviço externo. As quantidades são inteiras e os
 valores são em reais.
 
+![Visão geral com dados fictícios](docs/images/overview-pt.jpg)
+
 ## Executar
 
 Use Python 3.11 ou superior. No Windows, abra um terminal nesta pasta:

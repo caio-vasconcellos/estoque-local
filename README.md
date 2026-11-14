@@ -11,6 +11,8 @@ CSV exports and a Portuguese/English interface. It runs on your computer,
 without accounts or an external service. Quantities are whole units and the
 currency is BRL.
 
+![Overview with fictional sample data](docs/images/overview-en.jpg)
+
 ## Run
 
 Use Python 3.11 or later. On Windows, open a terminal in this folder:
