@@ -1,9 +1,10 @@
-# Regras de domínio
+# Como o estoque é calculado
 
-Este documento resume as regras que podem ser confirmadas em
-`stock/ledger.py` e nos testes automatizados.
+[English](DOMAIN_RULES.en.md)
 
-## Persistência local
+As contas ficam em `stock/ledger.py`. Os exemplos abaixo usam valores fictícios.
+
+## Banco local
 
 O projeto usa SQLite porque a aplicação é local e destinada a uma pessoa. O
 banco inteiro fica em `data/stock.sqlite3`, sem exigir um servidor separado.
@@ -36,6 +37,11 @@ todo o valor restante também sai.
 O custo fica gravado na movimentação da venda. Compras posteriores não alteram
 o lucro de vendas antigas.
 
+Por exemplo: comprar 10 unidades por R$ 10 e mais 10 por R$ 20 deixa 20 unidades
+com custo total de R$ 300, ou R$ 15 por unidade. Vender 5 por R$ 25 gera receita
+de R$ 125, custo de R$ 75 e lucro bruto de R$ 50. O saldo fica em 15 unidades,
+com valor de R$ 225.
+
 ## Devoluções parciais
 
 A devolução aponta para uma venda original, estorna sua receita e repõe seu
@@ -53,3 +59,27 @@ diferente é rejeitado.
 
 Relatórios aplicam o período a vendas, devoluções, compras e perdas. Saldo,
 custo médio e valor em estoque sempre representam o estado atual.
+
+As datas inicial e final entram no filtro. Devoluções contam no dia em que são
+registradas, mesmo quando a venda é antiga; por isso um período pode ter receita
+ou quantidade líquida negativa. Não há lançamentos retroativos.
+
+## Ler os rankings
+
+Mais vendido é quem tem mais unidades líquidas vendidas; isso não significa
+maior lucro. No catálogo de exemplo, o azeite vende 51 unidades e deixa
+R$ 249,90 de lucro bruto. O mel vende 42 e deixa R$ 751,80.
+
+Margem bruta é lucro bruto dividido pela receita líquida positiva. Ela fica em
+branco quando não há receita positiva. Produtos ativos sem vendas entram no
+ranking de menos vendidos. Os rankings mostram até cinco produtos; o CSV traz
+o catálogo completo. Seus valores monetários são centavos inteiros.
+
+## O que fica de fora
+
+Gasto em compras não é custo de vendas: parte da compra pode continuar em
+estoque. Perdas aparecem separadas do lucro bruto. Não há cálculo de lucro
+líquido, impostos ou rateio automático de frete e despesas.
+
+Uma devolução corrige uma venda. Ajustes corrigem o saldo, com motivo, mas não
+reescrevem o gasto histórico em compras. Esta versão não tem estorno de compra.

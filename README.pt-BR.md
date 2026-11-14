@@ -66,6 +66,8 @@ O SQLite guarda este sistema local, de uma pessoa, em um arquivo. Saldo e
 histórico são gravados juntos. O dinheiro fica em centavos, e a venda mantém
 seu custo histórico mesmo depois de uma compra mudar o custo médio.
 
+[Veja as contas e um exemplo](docs/DOMAIN_RULES.md).
+
 Lucro bruto não desconta aluguel, salários, impostos sobre vendas nem taxas.
 A seção **Como funciona** explica os indicadores. Não exponha o aplicativo
 diretamente à internet: ele não tem login.

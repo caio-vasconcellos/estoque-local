@@ -65,6 +65,8 @@ SQLite keeps this local, single-user application in one file. Stock updates and
 history entries commit together. Money is stored in cents, and a sale keeps its
 historical cost even after a new purchase changes the average.
 
+[See the calculations and an example](docs/DOMAIN_RULES.en.md).
+
 Gross profit does not deduct rent, wages, sales taxes or fees. The
 **How it works** page explains the indicators. Do not expose this app directly
 to the internet: it has no login.
