@@ -1,24 +1,32 @@
-# Contribuindo
+# Mexer no projeto / Working on the project
 
-Obrigado pelo interesse em contribuir com o Estoque Local.
+Com o ambiente virtual ativo, instale as dependências e rode os testes:
 
-## Preparação do ambiente
+With the virtual environment active, install the dependencies and run tests:
 
-1. Use Python 3.11 ou superior.
-2. Crie e ative um ambiente virtual.
-3. Instale as dependências de desenvolvimento com `python -m pip install -r requirements-dev.txt`.
-4. Execute `python -m pytest -q` antes de enviar alterações.
+```text
+python -m pip install -r requirements-dev.txt
+python -m pytest -q
+```
 
-## Fluxo sugerido
+Se alterar JavaScript, confira todos os módulos. No PowerShell:
 
-1. Crie uma branch curta e descritiva a partir de `main`.
-2. Faça mudanças pequenas, mantendo uma finalidade clara por commit.
-3. Inclua ou atualize testes quando alterar regras de negócio.
-4. Abra um pull request explicando o problema e a solução adotada.
+If you change JavaScript, check all modules. In PowerShell:
 
-## Qualidade
+```powershell
+Get-ChildItem stock/static/*.js | ForEach-Object { node --check $_.FullName }
+```
 
-- Preserve os valores monetários como centavos inteiros.
-- Mantenha o registro de estoque e o lançamento no livro-razão na mesma transação.
-- Evite alterações que quebrem a proteção contra movimentos duplicados.
-- Não inclua bancos locais, ambientes virtuais ou credenciais no repositório.
+Em Linux/macOS / On Linux/macOS:
+
+```sh
+for file in stock/static/*.js; do node --check "$file" || exit; done
+```
+
+Abra uma branch a partir de `main` e mantenha cada mudança focada. Ao alterar
+custo, devolução ou saldo, teste também arredondamento, repetição de envio e
+estoque insuficiente. Não inclua bancos locais, ambientes virtuais ou segredos.
+
+Start a branch from `main` and keep each change focused. When changing cost,
+returns or balances, also check rounding, retries and insufficient stock.
+Do not commit local databases, virtual environments or secrets.

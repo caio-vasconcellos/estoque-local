@@ -2,65 +2,84 @@
 
 [English](README.md)
 
-Aplicação web local para cadastrar produtos e registrar compras, vendas,
-devoluções parciais, perdas e ajustes de entrada. A interface mostra saldo,
-receita, custo das vendas, lucro bruto, margem e rankings por produto.
+Controle de estoque para uma pequena loja, feito com Python, FastAPI e SQLite.
+Registre compras e vendas, veja o que precisa de reposição e compare os produtos
+que mais saem com os que deixam mais lucro bruto.
 
-Os dados ficam no computador do usuário. O projeto não possui login nem foi
-feito para ser exposto diretamente à internet.
+Inclui devoluções parciais, ajustes de estoque, filtros por período, sete
+rankings, exportação CSV e interface em português e inglês. Roda no seu
+computador, sem conta ou serviço externo. As quantidades são inteiras e os
+valores são em reais.
+
+![Visão geral com dados fictícios](docs/images/overview-pt.jpg)
 
 ## Executar
 
-Requer Python 3.11 ou superior. No Windows:
+Use Python 3.11 ou superior. No Windows, abra um terminal nesta pasta:
 
 ```powershell
-.\start.ps1 -Setup
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe run.py
 ```
 
-Depois, acesse http://127.0.0.1:8765. Nas próximas execuções, use
-`start.cmd` ou `start.ps1`.
+Acesse [127.0.0.1:8765](http://127.0.0.1:8765). Mantenha o terminal aberto
+enquanto usa o aplicativo; Ctrl+C encerra o servidor. Depois de instalar,
+`start.cmd` também abre o sistema. O atalho `./start.ps1 -Setup` cria o ambiente
+e instala as dependências para você.
 
-Em Linux ou macOS, crie um ambiente virtual, instale `requirements.txt` e
-execute:
+Em Linux/macOS, use `.venv/bin/python` no lugar de `.venv\Scripts\python.exe`.
+Se o Python não incluir `venv`, instale `virtualenv` e crie o ambiente com
+`python -m virtualenv .venv`.
 
-```bash
-python run.py
+## Primeiro uso
+
+Cadastre um produto com código, preço de venda e estoque mínimo. Registre uma
+compra com quantidade e custo por unidade. Depois lance as vendas conforme
+acontecem; cada movimentação atualiza o saldo.
+
+**Explorar com dados de exemplo** carrega uma loja fictícia no catálogo vazio.
+Esses registros ficam no mesmo banco dos lançamentos que você fizer depois.
+Para começar com um banco limpo separado, pare o servidor e escolha outro
+caminho antes de abrir:
+
+```powershell
+$env:ESTOQUE_DB = "data/minha-loja.sqlite3"
+.\.venv\Scripts\python.exe run.py
 ```
 
-O banco é criado em `data/stock.sqlite3`. O botão **Baixar backup** gera uma
-cópia consistente desse banco.
+O banco anterior continua no lugar. Movimentações não podem ser apagadas nem
+lançadas com data passada. Para corrigir uma venda, registre uma devolução.
+Para perdas e diferenças de contagem, use um ajuste com motivo.
 
-## Decisões principais
+## Backup
 
-- **SQLite:** funciona em um único arquivo e não exige instalar um servidor de
-  banco de dados para este uso local.
-- **Centavos inteiros:** valores monetários não usam ponto flutuante, evitando
-  diferenças de arredondamento em somas e rateios.
-- **Transações:** a mudança no saldo e o registro da movimentação são
-  confirmados juntos; se uma etapa falhar, ambas são revertidas.
-- **Custo médio:** cada entrada atualiza o valor do estoque. A venda grava o
-  custo calculado naquele momento, e uma devolução recupera o custo da venda
-  original.
+O banco padrão é `data/stock.sqlite3`. **Baixar backup** cria uma cópia
+consistente com o sistema aberto. Guarde cópias fora deste computador.
 
-As regras completas e seus limites estão em
-[docs/DOMAIN_RULES.md](docs/DOMAIN_RULES.md).
+Para restaurar: pare o servidor, preserve o banco atual, copie o backup para o
+caminho configurado e abra o aplicativo novamente. Não há botão de restauração
+destrutiva. Os CSVs são relatórios, não backups do banco; as colunas monetárias
+usam centavos inteiros.
 
-## Organização
+## Sobre as contas
 
-- `stock/ledger.py`: banco, validações e regras de estoque;
-- `stock/web.py`: API HTTP local, exportação CSV e backup;
-- `stock/static/`: interface em JavaScript, HTML e CSS;
-- `tests/`: cenários de negócio e fluxo HTTP.
+O SQLite guarda este sistema local, de uma pessoa, em um arquivo. Saldo e
+histórico são gravados juntos. O dinheiro fica em centavos, e a venda mantém
+seu custo histórico mesmo depois de uma compra mudar o custo médio.
 
-## Testes
+[Veja as contas e um exemplo](docs/DOMAIN_RULES.md).
 
-Instale `requirements-dev.txt` e execute:
+Lucro bruto não desconta aluguel, salários, impostos sobre vendas nem taxas.
+A seção **Como funciona** explica os indicadores. Não exponha o aplicativo
+diretamente à internet: ele não tem login.
 
-```text
-python -m pytest -q
-node --check stock/static/app.js
-node --check stock/static/views.js
-```
+## Mexer no código
 
-A seção **Como funciona** da interface explica os indicadores exibidos. Lucro
-bruto não desconta despesas operacionais, impostos sobre vendas ou taxas.
+Instale `requirements-dev.txt` e execute `python -m pytest -q` no ambiente
+virtual. Node só é necessário para conferir a sintaxe JavaScript, não para
+usar o aplicativo. Os comandos estão no [guia de contribuição](CONTRIBUTING.md).
+
+As regras de estoque ficam em `stock/ledger.py`, a API em `stock/web.py` e a
+interface em `stock/static/`. Bancos locais e ambientes virtuais ficam fora do
+Git.
