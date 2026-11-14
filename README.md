@@ -2,65 +2,79 @@
 
 [Português](README.pt-BR.md)
 
-A local web application for products, purchases, sales, partial returns,
-losses and incoming stock adjustments. The interface reports stock balances,
-revenue, cost of sales, gross profit, margin and product rankings.
+Inventory management for a small shop, built with Python, FastAPI and SQLite.
+Record purchases and sales, check what needs restocking and compare which
+products sell most with which ones bring the most gross profit.
 
-Data stays on the user's computer. The project has no accounts and is not
-designed to be exposed directly to the internet.
+Includes partial sales returns, stock adjustments, date filters, seven rankings,
+CSV exports and a Portuguese/English interface. It runs on your computer,
+without accounts or an external service. Quantities are whole units and the
+currency is BRL.
 
 ## Run
 
-Python 3.11 or later is required. On Windows:
+Use Python 3.11 or later. On Windows, open a terminal in this folder:
 
 ```powershell
-.\start.ps1 -Setup
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe run.py
 ```
 
-Then open http://127.0.0.1:8765. For later runs, use `start.cmd` or
-`start.ps1`.
+Open [127.0.0.1:8765](http://127.0.0.1:8765). Keep the terminal open while
+using the app; Ctrl+C stops it. After setup, `start.cmd` also starts the app.
+The PowerShell shortcut `./start.ps1 -Setup` creates the environment and installs
+the dependencies for you.
 
-On Linux or macOS, create a virtual environment, install `requirements.txt`
-and run:
+On Linux/macOS, use `.venv/bin/python` instead of `.venv\Scripts\python.exe`.
+If Python does not include `venv`, install `virtualenv` and create the environment
+with `python -m virtualenv .venv`.
 
-```bash
-python run.py
+## First use
+
+Add a product with its code, selling price and minimum stock. Record a purchase
+with the quantity and unit cost. Then record sales as they happen; the balance
+updates with each movement.
+
+**Explore sample data** loads a fictional shop into an empty catalogue. Those
+records stay in the same database as any entries you add later. To start a
+separate clean database, stop the server and set a new path before launching:
+
+```powershell
+$env:ESTOQUE_DB = "data/my-shop.sqlite3"
+.\.venv\Scripts\python.exe run.py
 ```
 
-The database is created at `data/stock.sqlite3`. The **Download backup**
-button creates a consistent copy of that database.
+The original database remains where it was. Movements cannot be deleted or
+backdated. Use a return to correct a sale, or a stock adjustment with a reason
+for damage and counting differences.
 
-## Main decisions
+## Backup
 
-- **SQLite:** one file is enough for this local, single-user application and no
-  database server has to be installed.
-- **Integer cents:** money never uses binary floating-point values, avoiding
-  rounding differences in totals and allocations.
-- **Transactions:** the stock balance and its movement history are committed
-  together; if either write fails, both are rolled back.
-- **Weighted-average cost:** incoming stock updates inventory value. A sale
-  keeps the cost calculated at that time, and a return restores the original
-  sale cost.
+The default database is `data/stock.sqlite3`. **Download backup** makes a
+consistent copy while the app is open. Keep copies outside this computer.
 
-See [docs/DOMAIN_RULES.md](docs/DOMAIN_RULES.md) for the complete rules and
-limits.
+To restore: stop the server, preserve the current database, copy the backup to
+the configured database path and restart. The app has no destructive restore
+button. CSV exports are reports, not database backups; their monetary columns
+are integer cents.
 
-## Structure
+## About the calculations
 
-- `stock/ledger.py`: database, validation and inventory rules;
-- `stock/web.py`: local HTTP API, CSV exports and backup;
-- `stock/static/`: JavaScript, HTML and CSS interface;
-- `tests/`: business scenarios and HTTP flow.
+SQLite keeps this local, single-user application in one file. Stock updates and
+history entries commit together. Money is stored in cents, and a sale keeps its
+historical cost even after a new purchase changes the average.
 
-## Tests
+Gross profit does not deduct rent, wages, sales taxes or fees. The
+**How it works** page explains the indicators. Do not expose this app directly
+to the internet: it has no login.
 
-Install `requirements-dev.txt`, then run:
+## Working on the code
 
-```text
-python -m pytest -q
-node --check stock/static/app.js
-node --check stock/static/views.js
-```
+Install `requirements-dev.txt`, then run `python -m pytest -q` in the virtual
+environment. Node is only needed to check JavaScript syntax, not to run the app.
+See [the contribution guide](CONTRIBUTING.md) for the commands.
 
-The **How it works** page explains the displayed indicators. Gross profit does
-not deduct operating expenses, sales taxes or fees.
+The inventory rules are in `stock/ledger.py`, the HTTP API in `stock/web.py` and
+the interface in `stock/static/`. Local databases and virtual environments stay
+outside Git.
